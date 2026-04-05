@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "z8tLzIgm3CEMhOB-n0NZW"
+uri = "file://artifacts/indigo-motion/assets/images/icon.png"
+type = "image"
+title = "indigo motion app icon"
