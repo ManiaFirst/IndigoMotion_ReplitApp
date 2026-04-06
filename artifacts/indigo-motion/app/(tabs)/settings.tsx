@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React from "react";
 import {
   Platform,
   Pressable,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/context/ThemeContext";
 
 interface ToggleRowProps {
   label: string;
@@ -90,13 +91,8 @@ const linkStyles = StyleSheet.create({
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { isDark, setIsDark } = useTheme();
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
-
-  const [haptics, setHaptics] = useState(true);
-  const [autoConnect, setAutoConnect] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
-  const [latencyMode, setLatencyMode] = useState(false);
-  const [sessionLog, setSessionLog] = useState(true);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -123,31 +119,15 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* Glove Section */}
+        {/* Glove */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Glove Connection</Text>
-        <View style={styles.group}>
-          <ToggleRow
-            label="Auto-Connect"
-            description="Reconnect to last paired gloves on launch"
-            value={autoConnect}
-            onToggle={() => setAutoConnect((v) => !v)}
-            accent="#06b6d4"
-          />
-          <ToggleRow
-            label="Ultra-Low Latency Mode"
-            description="Prioritize speed over battery life"
-            value={latencyMode}
-            onToggle={() => setLatencyMode((v) => !v)}
-            accent="#d946ef"
-          />
-        </View>
         <View style={styles.group}>
           <LinkRow label="Paired Gloves" value="IM-LEFT-01, IM-RIGHT-01" icon="bluetooth-settings" accent="#06b6d4" />
           <LinkRow label="Firmware Version" value="v2.4.1" icon="chip" accent="#7C3AED" />
           <LinkRow label="Scan for New Devices" icon="bluetooth-audio" accent="#a78bfa" />
         </View>
 
-        {/* Audio Section */}
+        {/* Audio */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Audio</Text>
         <View style={styles.group}>
           <LinkRow label="Audio Output" value="System Default" icon="speaker" accent="#22c55e" />
@@ -155,36 +135,27 @@ export default function SettingsScreen() {
           <LinkRow label="Latency Offset" value="12 ms" icon="timer-outline" accent="#d946ef" />
         </View>
 
-        {/* App Section */}
+        {/* App */}
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>App</Text>
         <View style={styles.group}>
           <ToggleRow
-            label="Haptic Feedback"
-            description="Vibrate on key interactions"
-            value={haptics}
-            onToggle={() => setHaptics((v) => !v)}
-            accent="#7C3AED"
-          />
-          <ToggleRow
             label="Dark Theme"
             description="Use dark interface at all times"
-            value={darkMode}
-            onToggle={() => setDarkMode((v) => !v)}
+            value={isDark}
+            onToggle={() => setIsDark(!isDark)}
             accent="#7C3AED"
           />
           <ToggleRow
-            label="Session Logging"
-            description="Save motion data from each performance"
-            value={sessionLog}
-            onToggle={() => setSessionLog((v) => !v)}
-            accent="#a78bfa"
+            label="Auto-Connect Gloves"
+            description="Reconnect to last paired gloves on launch"
+            value={true}
+            onToggle={() => {}}
+            accent="#06b6d4"
           />
         </View>
 
         <View style={styles.group}>
-          <LinkRow label="Session History" icon="history" accent="#a78bfa" />
           <LinkRow label="About Indigo Motion" icon="information-outline" accent="#7C3AED" />
-          <LinkRow label="Support" icon="headset" accent="#06b6d4" />
         </View>
 
         <Pressable style={({ pressed }) => [styles.signOut, { borderColor: "#ef4444", opacity: pressed ? 0.7 : 1 }]}>

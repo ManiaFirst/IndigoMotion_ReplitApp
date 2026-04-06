@@ -5,7 +5,7 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
 function NativeTabLayout() {
@@ -18,6 +18,10 @@ function NativeTabLayout() {
       <NativeTabs.Trigger name="session">
         <Icon sf={{ default: "waveform", selected: "waveform" }} />
         <Label>Session</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="saved">
+        <Icon sf={{ default: "square.and.arrow.down", selected: "square.and.arrow.down.fill" }} />
+        <Label>Saved</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="calibrate">
         <Icon sf={{ default: "slider.horizontal.3", selected: "slider.horizontal.3" }} />
@@ -33,8 +37,6 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -54,11 +56,7 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={100} tint="dark" style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
           ) : null,
@@ -85,6 +83,18 @@ function ClassicTabLayout() {
               <SymbolView name="waveform" tintColor={color} size={22} />
             ) : (
               <MaterialCommunityIcons name="waveform" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="saved"
+        options={{
+          title: "Saved",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="square.and.arrow.down" tintColor={color} size={22} />
+            ) : (
+              <MaterialCommunityIcons name="content-save-outline" size={22} color={color} />
             ),
         }}
       />

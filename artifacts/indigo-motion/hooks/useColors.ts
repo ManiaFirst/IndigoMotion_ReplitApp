@@ -1,11 +1,14 @@
+import { useTheme } from "@/context/ThemeContext";
 import colors from "@/constants/colors";
 
 /**
- * Returns the dark design tokens for Indigo Motion.
- * The app always uses dark mode (userInterfaceStyle: "dark" in app.json).
+ * Returns design tokens based on the current theme (dark by default).
+ * The toggle in Settings updates ThemeContext which this hook reads.
  */
 export function useColors() {
-  // Indigo Motion is always dark — force dark palette
-  const palette = (colors as Record<string, typeof colors.light>).dark ?? colors.light;
+  const { isDark } = useTheme();
+  const palette = isDark
+    ? (colors as Record<string, typeof colors.light>).dark ?? colors.light
+    : colors.light;
   return { ...palette, radius: colors.radius };
 }

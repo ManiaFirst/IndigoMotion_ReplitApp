@@ -44,42 +44,28 @@ function PulseDot({ color }: { color: string }) {
   );
 }
 
-function StatCard({ label, value, unit, color }: { label: string; value: string; unit: string; color: string }) {
-  const colors = useColors();
-  return (
-    <View style={[statStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={[statStyles.label, { color: colors.mutedForeground }]}>{label}</Text>
-      <View style={statStyles.valueRow}>
-        <Text style={[statStyles.value, { color }]}>{value}</Text>
-        <Text style={[statStyles.unit, { color: colors.mutedForeground }]}>{unit}</Text>
-      </View>
-    </View>
-  );
-}
-
-const statStyles = StyleSheet.create({
-  card: {
-    flex: 1,
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
-    gap: 4,
-  },
-  label: { fontSize: 10, fontFamily: "Inter_500Medium", letterSpacing: 0.5 },
-  valueRow: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
-  value: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  unit: { fontSize: 11, fontFamily: "Inter_400Regular", marginBottom: 2 },
-});
-
 export default function SessionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { activeMode, isSessionActive, startSession, stopSession, leftHand, rightHand } = useGlove();
+  const {
+    activeMode,
+    isSessionActive,
+    isRecording,
+    startSession,
+    stopSession,
+    startRecording,
+    stopRecording,
+  } = useGlove();
   const [elapsed, setElapsed] = useState(0);
+  const [recElapsed, setRecElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const mode = MODES.find((m) => m.id === activeMode);
+  const accent = mode?.accent ?? colors.primary;
+  const leftAccent = "#a78bfa";
+  const rightAccent = "#06b6d4";
 
   useEffect(() => {
     if (isSessionActive) {
@@ -91,20 +77,22 @@ export default function SessionScreen() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [isSessionActive]);
 
-  const formatTime = (s: number) => {
+  useEffect(() => {
+    if (isRecording) {
+      setRecElapsed(0);
+      recTimerRef.current = setInterval(() => setRecElapsed((e) => e + 1), 1000);
+    } else {
+      if (recTimerRef.current) clearInterval(recTimerRef.current);
+      setRecElapsed(0);
+    }
+    return () => { if (recTimerRef.current) clearInterval(recTimerRef.current); };
+  }, [isRecording]);
+
+  const fmt = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
-
-  const avgBend = (hand: typeof leftHand) => {
-    const vals = Object.values(hand.fingers).map((f) => f.bend);
-    return (vals.reduce((a, b) => a + b, 0) / vals.length * 100).toFixed(0);
-  };
-
-  const accent = mode?.accent ?? colors.primary;
-  const leftAccent = "#a78bfa";
-  const rightAccent = "#06b6d4";
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -126,9 +114,17 @@ export default function SessionScreen() {
               {isSessionActive ? "LIVE" : "STANDBY"}
             </Text>
             {isSessionActive && (
-              <Text style={[styles.timer, { color: colors.mutedForeground }]}>{formatTime(elapsed)}</Text>
+              <Text style={[styles.timer, { color: colors.mutedForeground }]}>{fmt(elapsed)}</Text>
             )}
           </View>
+
+          {/* Recording indicator in top bar */}
+          {isRecording && (
+            <View style={styles.recBadge}>
+              <PulseDot color="#ef4444" />
+              <Text style={styles.recText}>REC {fmt(recElapsed)}</Text>
+            </View>
+          )}
         </View>
 
         {/* Mode info */}
@@ -157,19 +153,7 @@ export default function SessionScreen() {
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>SENSOR DATA</Text>
         <SensorHUD leftAccent={leftAccent} rightAccent={rightAccent} />
 
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <StatCard label="L GRIP" value={isSessionActive ? avgBend(leftHand) : "—"} unit="%" color={leftAccent} />
-          <StatCard label="R GRIP" value={isSessionActive ? avgBend(rightHand) : "—"} unit="%" color={rightAccent} />
-          <StatCard
-            label="TILT"
-            value={isSessionActive ? Math.abs(leftHand.orientation.pitch).toFixed(0) : "—"}
-            unit="°"
-            color={accent}
-          />
-        </View>
-
-        {/* Session controls */}
+        {/* Controls */}
         <View style={styles.controls}>
           {!isSessionActive ? (
             <Pressable
@@ -192,6 +176,44 @@ export default function SessionScreen() {
             </Pressable>
           ) : (
             <View style={styles.controlRow}>
+              {/* Record / Stop Recording button */}
+              {!isRecording ? (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.recBtn,
+                    {
+                      backgroundColor: "#ef444418",
+                      borderColor: "#ef4444",
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
+                  onPress={startRecording}
+                >
+                  <View style={styles.recDot} />
+                  <Text style={[styles.recBtnText, { color: "#ef4444" }]}>Record</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.recBtn,
+                    {
+                      backgroundColor: "#ef4444",
+                      borderColor: "#ef4444",
+                      opacity: pressed ? 0.75 : 1,
+                      shadowColor: "#ef4444",
+                      shadowOpacity: 0.45,
+                      shadowRadius: 14,
+                      shadowOffset: { width: 0, height: 4 },
+                    },
+                  ]}
+                  onPress={stopRecording}
+                >
+                  <MaterialCommunityIcons name="stop" size={16} color="#fff" />
+                  <Text style={[styles.recBtnText, { color: "#fff" }]}>Save {fmt(recElapsed)}</Text>
+                </Pressable>
+              )}
+
+              {/* Stop session */}
               <Pressable
                 style={({ pressed }) => [
                   styles.stopBtn,
@@ -220,20 +242,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   backBtn: { padding: 4 },
-  statusRow: {
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1, marginLeft: 8 },
+  statusText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 1.5 },
+  timer: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  recBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
+    backgroundColor: "#ef444420",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ef4444",
   },
-  statusText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 1.5,
-  },
-  timer: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
+  recText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#ef4444", letterSpacing: 0.5 },
   modeHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -249,38 +272,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  modeName: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
-  modeDesc: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  modeTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  modeTagText: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 1,
-  },
+  modeName: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  modeDesc: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  modeTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  modeTagText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
   sectionLabel: {
     fontSize: 10,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: 1.5,
     marginBottom: -6,
   },
-  statsRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  controls: {
-    marginTop: 6,
-  },
+  controls: { marginTop: 6 },
   mainBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -289,15 +291,25 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 18,
   },
-  mainBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-  },
-  controlRow: {
+  mainBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
+  controlRow: { flexDirection: "row", gap: 10 },
+  recBtn: {
+    flex: 1,
     flexDirection: "row",
-    gap: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 18,
+    borderWidth: 1.5,
   },
+  recDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#ef4444",
+  },
+  recBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   stopBtn: {
     flex: 1,
     flexDirection: "row",
@@ -308,8 +320,5 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
   },
-  stopBtnText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
+  stopBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });
