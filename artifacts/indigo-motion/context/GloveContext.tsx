@@ -16,6 +16,8 @@ export interface HandState {
     roll: number;
     yaw: number;
   };
+  accel: { x: number; y: number; z: number }; // g units
+  gyro: { x: number; y: number; z: number };  // deg/s
 }
 
 export type PerformMode =
@@ -60,6 +62,8 @@ function makeDefaultHand(connected: boolean): HandState {
       pinky: { bend: 0 },
     },
     orientation: { pitch: 0, roll: 0, yaw: 0 },
+    accel: { x: 0, y: 0, z: 1 },
+    gyro: { x: 0, y: 0, z: 0 },
   };
 }
 
@@ -110,21 +114,32 @@ export function GloveProvider({ children }: { children: React.ReactNode }) {
       timeRef.current += 0.04;
       const t = timeRef.current;
 
-      const simulate = (hand: HandState, offset: number): HandState => ({
-        ...hand,
-        fingers: {
-          thumb:  { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 0.9 + offset))) },
-          index:  { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 1.1 + offset + 0.5))) },
-          middle: { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 0.8 + offset + 1.0))) },
-          ring:   { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 1.3 + offset + 1.5))) },
-          pinky:  { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 1.0 + offset + 2.0))) },
-        },
-        orientation: {
-          pitch: 30 * Math.sin(t * 0.5 + offset),
-          roll: 45 * Math.sin(t * 0.3 + offset + 1),
-          yaw: 60 * Math.sin(t * 0.2 + offset + 2),
-        },
-      });
+      const simulate = (hand: HandState, offset: number): HandState => {
+        const pitch = 30 * Math.sin(t * 0.5 + offset);
+        const roll  = 45 * Math.sin(t * 0.3 + offset + 1);
+        const yaw   = 60 * Math.sin(t * 0.2 + offset + 2);
+        // Accel: gravity component (z ~1g) + dynamic hand motion
+        const ax = 0.18 * Math.sin(t * 1.7 + offset)      + 0.08 * Math.sin(t * 3.1 + offset);
+        const ay = 0.15 * Math.cos(t * 1.2 + offset + 0.8) + 0.06 * Math.cos(t * 2.6 + offset);
+        const az = 0.92 + 0.22 * Math.sin(t * 0.6 + offset + 0.4) + 0.1 * Math.sin(t * 2.3 + offset);
+        // Gyro: angular velocity tied to orientation change rate
+        const gx = 110 * Math.sin(t * 0.5 + offset + 0.2)  + 40 * Math.sin(t * 1.8 + offset);
+        const gy =  90 * Math.cos(t * 0.7 + offset)        + 30 * Math.cos(t * 2.1 + offset + 1);
+        const gz =  70 * Math.sin(t * 0.3 + offset + 1.5)  + 25 * Math.sin(t * 1.4 + offset + 0.5);
+        return {
+          ...hand,
+          fingers: {
+            thumb:  { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 0.9 + offset))) },
+            index:  { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 1.1 + offset + 0.5))) },
+            middle: { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 0.8 + offset + 1.0))) },
+            ring:   { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 1.3 + offset + 1.5))) },
+            pinky:  { bend: Math.max(0, Math.min(1, 0.5 + 0.45 * Math.sin(t * 1.0 + offset + 2.0))) },
+          },
+          orientation: { pitch, roll, yaw },
+          accel: { x: ax, y: ay, z: az },
+          gyro:  { x: gx, y: gy, z: gz },
+        };
+      };
 
       setLeftHand((h) => simulate(h, 0));
       setRightHand((h) => simulate(h, Math.PI));
